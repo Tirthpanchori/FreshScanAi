@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: npm
 
       - name: Install dependencies
@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: npm
 
       - name: Install dependencies
@@ -60,20 +60,22 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install fastapi uvicorn supabase Pillow numpy \
+                      python-dotenv python-multipart httpx pytest
 
       - name: Lint with Ruff
         run: |
           pip install ruff
-          ruff check .
+          ruff check . --config ruff.toml
 
       - name: Run tests
-        run: python -m pytest test_auth.py test_pipeline.py -v
+        run: python -m pytest tests/test_ci.py -v
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          DEV_BYPASS_AUTH: true
+          DEV_BYPASS_AUTH: "false"
           DEV_BYPASS_TOKEN: ci-test-token
+          SUPABASE_URL: ""
+          SUPABASE_KEY: ""
+          SUPABASE_SERVICE_KEY: ""
           FRONTEND_URL: http://localhost:5173
           API_BASE_URL: http://localhost:8000
