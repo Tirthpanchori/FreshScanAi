@@ -104,10 +104,9 @@ jobs:
             exit 1
           fi
           
-          # Push only the backend/ subfolder to the HF Spaces repo.
-          # The HF Space (karansingh12/freshscan-api) expects the FastAPI
-          # app files at the repo root, so we subtree-push backend/ → root.
-          git subtree push \
-            --prefix=backend \
-            https://karansingh12:${HF_TOKEN}@huggingface.co/spaces/karansingh12/freshscan-api \
-            main
+          # Since HF Spaces might have auto-generated files (like README.md)
+          # that aren't in this repo, a normal push gets rejected.
+          # We need to split the backend directory into its own commit history
+          # and FORCE push it to HF Spaces, making GitHub the single source of truth.
+          COMMIT_HASH=$(git subtree split --prefix backend main)
+          git push https://karansingh12:${HF_TOKEN}@huggingface.co/spaces/karansingh12/freshscan-api ${COMMIT_HASH}:main --force
