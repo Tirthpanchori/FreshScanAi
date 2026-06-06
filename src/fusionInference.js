@@ -47,6 +47,12 @@ const WEIGHT_GILL = 0.25;
 const THRESHOLD_FRESH    = 0.6;  // score >= 0.6 → Fresh
 const THRESHOLD_MODERATE = 0.35; // score >= 0.35 → Moderate, else Spoiled
 
+// If Stream A max-class probability falls below this after temperature scaling,
+// the image is unlikely to be a fish (all-class uncertainty).
+// Note: the ONNX model was trained only on fish, so non-fish images may still
+// score above this — treat as a best-effort guard, not a hard detector.
+const NOT_A_FISH_THRESHOLD = 0.36;
+
 // Default model paths (relative to Vite public/ folder)
 const DEFAULT_MODEL_PATHS = {
   streamA: '/models/stream_a_mobilenetv2.onnx',
@@ -338,6 +344,12 @@ export class FishFreshnessInference {
     );
     const bodyProbs = temperatureScale(bodyLogits, TEMPERATURE_A); // [P(C1), P(C2), P(C3)]
 
+    // ── Fish confidence guard ────────────────────────────────────────────────
+    // If no class exceeds the threshold the image is likely not a fish.
+    if (Math.max(...bodyProbs) < NOT_A_FISH_THRESHOLD) {
+      throw new Error('NOT_A_FISH');
+    }
+
     // ── Stream B (eye pass) ─────────────────────────────────────────────────
     const eyeTensor  = preprocessImage(eyeImage, STREAM_B_INPUT_SIZE);
     const eyeLogitsB = await runOnnxSession(
@@ -381,6 +393,23 @@ export class FishFreshnessInference {
     };
 
     return result;
+  }
+
+  /**
+   * Run full fusion pipeline on a SINGLE image — mirrors the HF backend
+   * `scan_auto` endpoint which passes the same image to all three streams:
+   *   body_logits = predict_stream_a(img)
+   *   eye_logits  = predict_stream_b(img)   ← same image
+   *   gill_logits = predict_stream_b(img)   ← same image
+   *
+   * Throws Error('NOT_A_FISH') if the image is likely not a fish.
+   *
+   * @param {HTMLImageElement|HTMLCanvasElement|ImageBitmap} image
+   * @returns {Promise<FusionResult>}
+   */
+  async predictSingle(image) {
+    if (!this._loaded) throw new Error('Call loadModels() before predictSingle().');
+    return this.predict(image, image, image);
   }
 
   /**

@@ -120,6 +120,35 @@ export const api = {
     return validRes.json() as Promise<ScanResponse>;
   },
 
+  /**
+   * Try the HF backend with a single image (same as submitScan with no meta).
+   * Returns null silently on network errors so callers can fall back to ONNX
+   * without showing an error toast.
+   * Throws on 4xx/5xx server errors (e.g. NOT_A_FISH from backend).
+   */
+  scanOnline: async (blob: Blob): Promise<ScanResponse | null> => {
+    const form = new FormData();
+    form.append('image', blob, 'scan.jpg');
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/scan-auto`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error((err as { detail?: string }).detail || `HTTP ${res.status}`);
+      }
+      return res.json() as Promise<ScanResponse>;
+    } catch (err) {
+      if (err instanceof TypeError) {
+        // Network offline — silent fallback to ONNX
+        return null;
+      }
+      throw err; // Server error (e.g. NOT_A_FISH) — propagate
+    }
+  },
+
   getLatestScan: (): Promise<ScanResponse> =>
     apiFetch<ScanResponse>('/api/v1/scans/latest'),
 

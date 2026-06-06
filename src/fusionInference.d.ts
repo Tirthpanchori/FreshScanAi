@@ -28,13 +28,23 @@ export interface SmokeTestResult {
 export class FishFreshnessInference {
   constructor(modelPaths?: { streamA?: string; streamB?: string });
   loadModels(): Promise<void>;
+  /** Three separate images — full 3-step capture flow. */
   predict(
     body: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
-    eye: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
+    eye:  HTMLImageElement | HTMLCanvasElement | ImageBitmap,
     gill: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
+  ): Promise<FusionResult>;
+  /**
+   * Single-image flow — mirrors HF backend scan_auto: the same image is used
+   * for body, eye, and gill streams. Throws Error('NOT_A_FISH') if the image
+   * confidence is below the fish detection threshold.
+   */
+  predictSingle(
+    image: HTMLImageElement | HTMLCanvasElement | ImageBitmap,
   ): Promise<FusionResult>;
   dispose(): Promise<void>;
 }
+
 
 export function fuseFromLogits(
   bodyLogits: number[],
