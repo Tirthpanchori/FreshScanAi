@@ -366,7 +366,7 @@ async def _upload_image(image_bytes: bytes, user_id: str, scan_id: str) -> Optio
 
 # ── AUTH ──────────────────────────────────────────────────────────────────────
 @app.get("/api/v1/health")
-async def health_check():
+async def api_health_check():
     """Health check endpoint — no auth or DB required."""
     return {"status": "ok"}
 
